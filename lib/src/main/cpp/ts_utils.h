@@ -14,31 +14,34 @@
  * limitations under the License.
  */
 
-#ifndef __LANGUAGE_H__
-#define __LANGUAGE_H__
+#ifndef __TS_UTILS_H__
+#define __TS_UTILS_H__
 
+#include <jni.h>
 #include <tree_sitter/api.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-TSLanguage *tree_sitter_bash();
+// native TSNode -> java TSNode
+jobject javaNode(JNIEnv*, const TSNode*);
 
-TSLanguage *tree_sitter_c();
+// java TSNode -> native TSNode
+TSNode nativeNode(JNIEnv*, const jobject);
 
-TSLanguage *tree_sitter_cpp();
+// native TSPoint -> java TSPoint
+jobject javaPoint(JNIEnv*, const TSPoint*);
 
-TSLanguage *tree_sitter_java();
+// java TSPoint -> native TSPoint
+TSPoint nativePoint(JNIEnv*, const jobject);
 
-TSLanguage *tree_sitter_kotlin();
-
-TSLanguage *tree_sitter_python();
-
-TSLanguage *tree_sitter_rust();
+// get callable object from kotlin lambda
+jmethodID getMethod(JNIEnv*, const jobject, const char*);
 
 #ifdef __cplusplus
 }
-#endif
+#endif // __cplusplus
 
-#endif // __LANGUAGE_H__
+#endif // __TS_UTILS_H__
+

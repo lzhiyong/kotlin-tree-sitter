@@ -52,15 +52,6 @@ enum class TSQueryError {
   LANGUAGE
 }
 
-sealed class TSLanguage(val pointer: Long = nullptr) {  
-    object Bash : TSLanguage(TreeSitter.getSupportLanguage(Bash::class.simpleName))
-    object C : TSLanguage(TreeSitter.getSupportLanguage(C::class.simpleName))
-    object Cpp : TSLanguage(TreeSitter.getSupportLanguage(Cpp::class.simpleName))
-    object Java : TSLanguage(TreeSitter.getSupportLanguage(Java::class.simpleName))
-    object Kotlin : TSLanguage(TreeSitter.getSupportLanguage(Kotlin::class.simpleName))
-    object Python : TSLanguage(TreeSitter.getSupportLanguage(Python::class.simpleName))
-    object Rust : TSLanguage(TreeSitter.getSupportLanguage(Rust::class.simpleName))
-}
 
 data class TSQueryPredicateStep(
     val type: TSQueryPredicateStepType, 
@@ -108,351 +99,6 @@ data class TSRange(
 // Pointer class
 open class Pointer(var pointer: Long = nullptr)
 
-data class TSNode(
-     @JvmField val context: IntArray?,
-     @JvmField val id: Long,
-     @JvmField val tree: Long
-) {
-    
-    val startByte: Int
-        get() = TreeSitter.nodeStartByte(this)
-        
-    val endByte: Int
-        get() = TreeSitter.nodeEndByte(this)
-    
-    val startPoint: TSPoint
-        get() = TreeSitter.nodeStartPoint(this)
-        
-    val endPoint: TSPoint
-        get() = TreeSitter.nodeEndPoint(this)
-        
-    val type: String
-        get() = TreeSitter.nodeType(this)
-        
-    val isNamed: Boolean
-        get() = TreeSitter.nodeIsNamed(this)
-        
-    val isNull: Boolean
-        get() = TreeSitter.nodeIsNull(this)
-    
-    val hasError: Boolean
-        get() = TreeSitter.nodeHasError(this)
-    
-    val symbol: Int
-        get() = TreeSitter.nodeSymbol(this)
-    
-    fun getChildCount(): Int {
-        return TreeSitter.nodeChildCount(this)
-    }
-    
-    fun getNamedChildCount(): Int {
-        return TreeSitter.nodeNamedChildCount(this)
-    }
-    
-    fun getPrevSibling(): TSNode {
-        return TreeSitter.nodePrevSibling(this)
-    }
-    
-    fun getNextSibling(): TSNode {
-        return TreeSitter.nodeNextSibling(this)
-    }
-    
-    fun getPrevNamedSibling(): TSNode {
-        return TreeSitter.nodePrevNamedSibling(this)
-    }
-    
-    fun getNextNamedSibling(): TSNode {
-        return TreeSitter.nodeNextNamedSibling(this)
-    }
-    
-    fun walk(): TSTreeCursor {
-        val treeCursor = TSTreeCursor()
-        treeCursor.pointer = TreeSitter.newTreeCursor(this)
-        return treeCursor
-    }
-
-    fun childAt(index: Int): TSNode {
-        return TreeSitter.nodeChildAt(this, index)
-    }
-    
-    fun namedChildAt(index: Int): TSNode {
-        return TreeSitter.nodeNamedChildAt(this, index)
-    }
-    
-    fun childByFieldName(name: String): TSNode {
-        return TreeSitter.nodeChildByFieldName(this, name, name.length)
-    }
-    
-    override operator fun equals(other: Any?): Boolean = when {
-        other === this -> true
-        other !is TSNode -> false
-        else -> other.id == id && other.tree == tree
-    }
-    
-    override fun toString(): String {
-        return TreeSitter.nodeString(this)
-    }
-}
-
-// native TSTreeCursor pointer
-class TSTreeCursor : Pointer(), Closeable {
-    fun gotoFirstChild(): Boolean {
-        return TreeSitter.cursorGotoFirstChild(this.pointer)
-    }
-
-    fun gotoNextSibling(): Boolean {
-        return TreeSitter.cursorGotoNextSibling(this.pointer)
-    }
-
-    fun gotoParent(): Boolean {
-        return TreeSitter.cursorGotoParent(this.pointer)
-    }
-
-    fun getCurrFieldName(): String? {
-        return TreeSitter.cursorCurrentFieldName(this.pointer)
-    }
-
-    fun getCurrNode(): TSNode {
-        return TreeSitter.cursorCurrentNode(this.pointer)
-    }
-
-    override fun close() = TreeSitter.deleteTreeCursor(this.pointer)
-}
-
-
-class TSParser : Pointer(), Closeable {
-    init {
-        // init native TSParser pointer
-        this.pointer = TreeSitter.newParser()
-    }
-    
-    fun setLanguage(language: TSLanguage) {
-        TreeSitter.setParserLanguage(this.pointer, language.pointer)
-    }
-    
-    fun getLanguage(): Long {
-        return TreeSitter.getParserLanguage(this.pointer)
-    }
-    
-    fun setTimeout(timeout: Long) {
-        TreeSitter.setParserTimeout(this.pointer, timeout)
-    }
-    
-    fun getTimeout(): Long {
-        return TreeSitter.getParserTimeout(this.pointer)
-    }
-    
-    // 
-    fun setLogger(callback: (TSLogType, String) -> Unit) {
-        TreeSitter.setParserLogger(this.pointer, callback)
-    }
-    
-    fun setCancellationFlag(flag: Boolean) {
-        TreeSitter.setParserCancellationFlag(this.pointer, flag)
-    }
-    
-    fun getCancellationFlag(): Boolean {
-        return TreeSitter.getParserCancellationFlag(this.pointer)
-    }
-    
-    // parse string
-    fun parse(
-        text: String, 
-        oldTree: TSTree? = null,
-        encoding: TSInputEncoding = TSInputEncoding.UTF16
-    ): TSTree {
-        // specify the encoding of bytes
-        val bytes = when(encoding) {
-            TSInputEncoding.UTF8 -> text.toByteArray()
-            else -> text.toByteArray(Charsets.UTF_16LE)
-        }
-    
-        return when(oldTree) {
-            null -> {
-                TSTree().also{
-                    it.pointer = TreeSitter.parseString(this.pointer, nullptr, bytes, encoding)
-                }
-            }
-            else -> {
-                oldTree.pointer = TreeSitter.parseString(this.pointer, oldTree.pointer, bytes, encoding)
-                oldTree
-            }
-        }
-    }
-    
-    // parser parse
-    fun parse(
-        callback: (byteIndex: Int, position: TSPoint) -> ByteArray, 
-        oldTree: TSTree? = null,
-        encoding: TSInputEncoding = TSInputEncoding.UTF16
-    ): TSTree {
-        return when(oldTree) {
-            null -> {
-                TSTree().also {
-                    it.pointer = TreeSitter.parserParse(this.pointer, nullptr, encoding, callback)
-                }
-            }
-            else -> {
-                oldTree.pointer = TreeSitter.parserParse(this.pointer, oldTree!!.pointer, encoding, callback)
-                oldTree
-            }
-        }
-    }
-    
-    // the parseFile method is used to debug
-    fun parseFile(
-        pathname: String, 
-        encoding: TSInputEncoding = TSInputEncoding.UTF8
-    ): TSTree {
-        return TSTree().also {
-            it.pointer = TreeSitter.parseFile(this.pointer, pathname, encoding)
-        }
-    }
-    
-    fun reset() {
-        TreeSitter.resetParser(this.pointer)
-    }
-    
-    fun printGraph(pathname: String) {
-        TreeSitter.parserDotGraphs(this.pointer, pathname)
-    }
-    
-    override fun close() {
-        TreeSitter.deleteParser(this.pointer)
-    }
-}
-
-// native TSTree pointer
-class TSTree : Pointer(), Closeable {
-
-    val rootNode: TSNode
-        get() = TreeSitter.getRootNode(this.pointer)
-    
-    fun edit(input: TSInputEdit) {
-        TreeSitter.editTree(this.pointer, input)
-    }
-    
-    fun getLanguage(): Long {
-        return TreeSitter.getTreeLanguage(this.pointer)
-    }
-
-    fun printGraph(pathname: String) {
-        TreeSitter.treeDotGraph(this.pointer, pathname)
-    }
-    
-    override fun close() {
-        TreeSitter.deleteTree(this.pointer)
-    }
-}
-
-class TSQuery(
-    language: TSLanguage, 
-    expression: String,
-    onError: ((offset: Int, type: TSQueryError) -> Unit)? = null
-) : Pointer(), Closeable {
-    
-    init {
-        // init native TSQuery pointer
-        this.pointer = TreeSitter.newQuery(language.pointer, expression, onError)
-    }
-    
-    val patternCount: Int
-        get() = TreeSitter.queryPatternCount(this.pointer)
-    
-    val captureCount: Int
-        get() = TreeSitter.queryCaptureCount(this.pointer)
-    
-    val stringCount: Int
-        get() = TreeSitter.queryStringCount(this.pointer)
-    
-    fun startByteForPattern(start: Int): Int {
-        return TreeSitter.queryStartByteForPattern(this.pointer, start)
-    }
-    
-    // pattern index
-    fun predicatesForPattern(index: Int): Array<TSQueryPredicateStep> {
-        return TreeSitter.queryPredicatesForPattern(this.pointer, index)
-    }
-    
-    fun isPatternGuaranteedAtStep(offset: Int): Boolean {
-        return TreeSitter.queryIsPatternGuaranteedAtStep(this.pointer, offset)
-    }
-    
-    fun captureNameForId(id: Int): String {
-        return TreeSitter.queryCaptureNameForId(this.pointer, id)
-    }
-    
-    fun captureQuantifierForId(patternId: Int, captureId: Int): TSQuantifier {
-        return TreeSitter.queryCaptureQuantifierForId(this.pointer, patternId, captureId);
-    }
-    
-    fun stringValueForId(id: Int): String {
-        return TreeSitter.queryStringValueForId(this.pointer, id)
-    }
-    
-    fun disableCapture(name: String?, id: Int) {
-        TreeSitter.queryDisableCapture(this.pointer, name, id)
-    }
-    
-    fun disablePattern(id: Int) {
-        TreeSitter.queryDisablePattern(this.pointer, id)
-    }
-    
-    override fun close() {
-        TreeSitter.deleteQuery(this.pointer)
-    }
-}
-
-
-class TSQueryCursor : Pointer(), Closeable {
-    
-    init {
-        // init native TSQueryCursor pointer
-        this.pointer = TreeSitter.newQueryCursor()
-    }
-    
-    val didExceedMatchLimit: Boolean 
-        get() = TreeSitter.queryCursorDidExceedMatchLimit(this.pointer)
-    
-    var matchLimit: Int 
-        get() = TreeSitter.queryCursorMatchLimit(this.pointer)
-        set(limit) = TreeSitter.queryCursorSetMatchLimit(this.pointer, limit)
-    
-    fun exec(query: TSQuery, node: TSNode) {
-        TreeSitter.queryCursorExec(this.pointer, query.pointer, node)
-    }
-    
-    // offset[start, end]
-    fun setByteRange(startOffset: Int, endOffset: Int) {
-        TreeSitter.queryCursorSetByteRange(this.pointer, startOffset, endOffset)
-    }
-    
-    // Point[startPoint, endPoint] 
-    fun setPointRange(startPoint: TSPoint, endPoint: TSPoint) {
-        TreeSitter.queryCursorSetPointRange(this.pointer, startPoint, endPoint)
-    }
-    
-    // Range[startRow, startColumn, endRow, endColumn]
-    fun setRange(startRow: Int, startColumn: Int, endRow: Int, endColumn: Int) {
-        TreeSitter.queryCursorSetRange(this.pointer, startRow, startColumn, endRow, endColumn)
-    }
-    
-    fun nextMatch(): TSQueryMatch? {
-        return TreeSitter.queryCusorNextMatch(this.pointer)
-    }
-    
-    fun nextCapture(): TSCapture? {
-        return TreeSitter.queryCusorNextCapture(this.pointer)
-    }
-    
-    fun removeMatch(id: Int) {
-        TreeSitter.queryCursorRemoveMatch(this.pointer, id)
-    }
-    
-    override fun close() {
-        TreeSitter.deleteQueryCursor(this.pointer)
-    }
-}
 
 internal object TreeSitter {
     init {
@@ -483,13 +129,6 @@ internal object TreeSitter {
     external fun parserParse(
         parser: Long, 
         oldTree: Long, 
-        encoding: TSInputEncoding, 
-        callback: (byteIndex: Int, position: TSPoint) -> ByteArray
-    ): Long
-    
-    external fun parseFile(
-        parser: Long, 
-        pathname: String, 
         encoding: TSInputEncoding
     ): Long
    
@@ -502,7 +141,7 @@ internal object TreeSitter {
     // ts_parser_cancellation_flag
     external fun getParserCancellationFlag(parser: Long): Boolean
     // ts_parser_set_logger
-    external fun setParserLogger(parser: Long, callback: (TSLogType, String) -> Unit)
+    external fun setParserLogger(parser: Long)
     // ts_parser_set_included_ranges
     external fun setParserIncludedRanges(parser: Long, ranges: Array<IntArray>, length: Int)
     // ts_parser_print_dot_graphs
@@ -518,7 +157,7 @@ internal object TreeSitter {
     // ts_tree_edit
     external fun editTree(tree: Long, input: TSInputEdit)
     // ts_tree_get_changed_ranges
-    external fun getTreeChangedRange(oldTree: Long, newTree: Long, length: Int): Long
+    external fun getTreeChangedRanges(oldTree: Long, newTree: Long): Array<TSRange>
     // ts_tree_print_dot_graph
     external fun treeDotGraph(tree: Long, file: String)
     
@@ -643,3 +282,4 @@ internal object TreeSitter {
     // languages
     external fun getSupportLanguage(name: String?): Long
 }
+

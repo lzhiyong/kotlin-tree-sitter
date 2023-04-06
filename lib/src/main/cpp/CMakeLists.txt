@@ -21,7 +21,17 @@ project(tree-sitter-jni)
 set(CMAKE_C_COMPILE clang)
 set(CMAKE_CXX_COMPILE clang++)
 
-add_library(${PROJECT_NAME} SHARED bundle.cpp)
+add_library(${PROJECT_NAME} SHARED
+    jni_helper.cpp
+    ts_node.cpp
+    ts_parser.cpp
+    ts_tree.cpp
+    ts_tree_cursor.cpp
+    ts_query.cpp
+    ts_query_cursor.cpp
+    ts_language.cpp
+    ts_utils.cpp
+    )
 
 target_include_directories(${PROJECT_NAME} PRIVATE 
     ${PROJECT_SOURCE_DIR}/../../../build/src/tree-sitter/lib/include)

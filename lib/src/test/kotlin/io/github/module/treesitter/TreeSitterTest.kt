@@ -49,7 +49,7 @@ class TreeSitterTest {
                 }
             } else {
                 val node = cursor.getCurrNode()
-                if (node.isNamed) {
+                if (node.isNamed()) {
                     indent(count)
                     cursor.getCurrFieldName()?.let { print("$it: ") }
                     println(
@@ -81,19 +81,18 @@ class TreeSitterTest {
         val query = TSQuery(language, expression) { offset, type ->
             println("$offset -> $type")
         }
-        */      
+        */
         val query = TSQuery(language, expression)
         val cursor = TSQueryCursor()
         cursor.exec(query, rootNode)
         //cursor.setRange(0, 0, 1, 0)
        
         var match: TSQueryMatch? = null
-        var prevNode = rootNode
+        //var prevNode = rootNode
         
         while ({match = cursor.nextMatch(); match}() != null) {
             val node = match!!.captures[0].node
-            if(node != prevNode) {
-            prevNode = node
+            
             val scopeName = query.captureNameForId(match!!.captures[0].index)
             val text = source.substring(node.startByte / 2, node.endByte / 2)
             
@@ -110,7 +109,7 @@ class TreeSitterTest {
                     TSQueryPredicateStepType.DOWN -> println("Done")
                 }
             }
-            }
+            
         }
         
         println()
@@ -134,7 +133,7 @@ class TreeSitterTest {
             "    return 0;\n",
             "}\n"
         )
-       
+        
         val stream = {}.javaClass.getResource("/queries/c/highlights.scm")?.openStream()
         var expression = stream?.bufferedReader()?.use(BufferedReader::readText) ?: ""
 
@@ -237,14 +236,14 @@ class TreeSitterTest {
         println("child: ${tree.rootNode.getChildCount()}")
         println("edit tree cost time:$time ms")
         
-        parser.setCancellationFlag(true)
-        assertEquals(parser.getCancellationFlag(), true)
+        parser.cancel(true)
+        assertEquals(parser.isCancelled(), true)
         
-        parser.setCancellationFlag(false)
-        assertEquals(parser.getCancellationFlag(), false)
+        parser.cancel(false)
+        assertEquals(parser.isCancelled(), false)
         
-        parser.setCancellationFlag(true)
-        assertEquals(parser.getCancellationFlag(), true)
+        parser.cancel(true)
+        assertEquals(parser.isCancelled(), true)
         
         tree.close()
         parser.close()
