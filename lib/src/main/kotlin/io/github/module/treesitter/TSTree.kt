@@ -27,8 +27,8 @@ class TSTree : Pointer(), Closeable {
         TreeSitter.editTree(this.pointer, input)
     }
     
-    fun getChangedRanges(oldTree: TSTree?): Array<TSRange> {
-        return TreeSitter.getTreeChangedRanges(oldTree?.pointer ?: 0L, this.pointer)
+    fun getChangedRanges(oldTree: TSTree): Array<TSRange> {
+        return TreeSitter.getTreeChangedRanges(oldTree.pointer, this.pointer)
     }
     
     fun getLanguage(): Long {

@@ -105,12 +105,14 @@ Java_io_github_module_treesitter_TreeSitter_editTree(JNIEnv* env, jobject thiz, 
 JNIEXPORT jobjectArray JNICALL
 Java_io_github_module_treesitter_TreeSitter_getTreeChangedRanges(JNIEnv* env, jobject thiz, 
                                                                  jlong oldTree, jlong newTree) {
-    uint32_t length = 0;
+    uint32_t length;
     TSRange *ranges = ts_tree_get_changed_ranges(
         reinterpret_cast<TSTree*>(oldTree),
         reinterpret_cast<TSTree*>(newTree), 
-        reinterpret_cast<uint32_t*>(&length)
+        &length
     );
+    
+    LOGI("length: %u\n", length);
     
     jmethodID constructor = env->GetMethodID(
         javaTSRangeClass, 

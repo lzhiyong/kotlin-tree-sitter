@@ -216,24 +216,27 @@ class TreeSitterTest {
         val language = TSLanguage.C
         parser.setLanguage(language)
         // old tree
-        var tree = parser.parse(before.joinToString(""))
+        val oldTree = parser.parse(before.joinToString(""))
         
         val time = measureTimeMillis {
-            tree.edit(TSInputEdit(
-                startByte = 19,
-                oldEndByte = 20,
-                newEndByte = 34,
+            oldTree.edit(TSInputEdit(
+                startByte = 38,
+                oldEndByte = 38,
+                newEndByte = 66,
                 startPoint = TSPoint(1, 0),
-                oldEndPoint = TSPoint(1, 1),
-                newEndPoint = TSPoint(1, 15)
+                oldEndPoint = TSPoint(1, 0),
+                newEndPoint = TSPoint(1, 28)
             ))
         }
         
         // new tree
-        tree = parser.parse(after.joinToString(""), tree)
+        val newTree = parser.parse(after.joinToString(""), oldTree)
         // traverse the syntax tree
-        traverse(tree.rootNode)
-        println("child: ${tree.rootNode.getChildCount()}")
+        traverse(newTree.rootNode)
+        
+        newTree.getChangedRanges(oldTree).forEach(::println)
+        
+        println("child: ${newTree.rootNode.getChildCount()}")
         println("edit tree cost time:$time ms")
         
         parser.cancel(true)
@@ -245,7 +248,7 @@ class TreeSitterTest {
         parser.cancel(true)
         assertEquals(parser.isCancelled(), true)
         
-        tree.close()
+        newTree.close()
         parser.close()
     }
 }
