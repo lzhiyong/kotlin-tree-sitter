@@ -131,6 +131,12 @@ internal object TreeSitter {
         oldTree: Long, 
         encoding: TSInputEncoding
     ): Long
+    
+    external fun parseFile(
+        parser: Long, 
+        pathname: String, 
+        encoding: TSInputEncoding
+    ): Long
    
     // ts_parser_set_timeout_micros
     external fun setParserTimeout(parser: Long, timeout: Long)
@@ -156,6 +162,8 @@ internal object TreeSitter {
     external fun getTreeLanguage(tree: Long): Long
     // ts_tree_edit
     external fun editTree(tree: Long, input: TSInputEdit)
+    // ts_tree_included_ranges
+    external fun getTreeIncludedRanges(tree: Long): Array<TSRange>
     // ts_tree_get_changed_ranges
     external fun getTreeChangedRanges(oldTree: Long, newTree: Long): Array<TSRange>
     // ts_tree_print_dot_graph

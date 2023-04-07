@@ -27,6 +27,10 @@ class TSTree : Pointer(), Closeable {
         TreeSitter.editTree(this.pointer, input)
     }
     
+    fun getIncluedRanges(): Array<TSRange> {
+        return TreeSitter.getTreeIncludedRanges(this.pointer)
+    }
+    
     fun getChangedRanges(oldTree: TSTree): Array<TSRange> {
         return TreeSitter.getTreeChangedRanges(oldTree.pointer, this.pointer)
     }

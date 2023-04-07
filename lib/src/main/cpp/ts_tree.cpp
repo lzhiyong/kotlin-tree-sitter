@@ -33,6 +33,35 @@ extern "C" {
 jclass javaTSRangeClass = nullptr;
 jclass javaTSInputEditClass = nullptr;
 
+// TSRange array
+jobjectArray getRanges(JNIEnv *env, const TSRange *ranges, const uint32_t length) {
+    jmethodID constructor = env->GetMethodID(
+        javaTSRangeClass, 
+        "<init>", 
+        "(Lio/github/module/treesitter/TSPoint;Lio/github/module/treesitter/TSPoint;II)V"
+    );
+    
+    jobjectArray rangeArray = env->NewObjectArray(length, javaTSRangeClass, nullptr);
+    
+    for(int i=0; i < length; ++i) {
+        jobject rangeObject = env->NewObject(
+            javaTSRangeClass,
+            constructor,
+            javaPoint(env, &ranges[i].start_point),
+            javaPoint(env, &ranges[i].end_point),
+            ranges[i].start_byte,
+            ranges[i].end_byte
+        );
+        
+        env->SetObjectArrayElement(rangeArray, i, rangeObject);
+    }
+    
+    // free memory
+    free((void*)ranges);
+    
+    return rangeArray;
+}
+
 /**
  * Delete the syntax tree, freeing all of the memory that it used.
  */
@@ -89,6 +118,22 @@ Java_io_github_module_treesitter_TreeSitter_editTree(JNIEnv* env, jobject thiz, 
 }
 
 /**
+ * Get the array of included ranges that was used to parse the syntax tree.
+ *
+ * The returned pointer must be freed by the caller.
+ */
+JNIEXPORT jobjectArray JNICALL
+Java_io_github_module_treesitter_TreeSitter_getTreeIncluedRanges(JNIEnv* env, jobject thiz, jlong tree) {
+    uint32_t length;
+    TSRange *ranges = ts_tree_included_ranges(
+        reinterpret_cast<TSTree*>(tree),
+        &length
+    );
+    
+    return getRanges(env, ranges, length);
+}
+
+/**
  * Compare an old edited syntax tree to a new syntax tree representing the same
  * document, returning an array of ranges whose syntactic structure has changed.
  *
@@ -112,30 +157,7 @@ Java_io_github_module_treesitter_TreeSitter_getTreeChangedRanges(JNIEnv* env, jo
         &length
     );
     
-    LOGI("length: %u\n", length);
-    
-    jmethodID constructor = env->GetMethodID(
-        javaTSRangeClass, 
-        "<init>", 
-        "(Lio/github/module/treesitter/TSPoint;Lio/github/module/treesitter/TSPoint;II)V"
-    );
-    
-    jobjectArray rangeArray = env->NewObjectArray(length, javaTSRangeClass, nullptr);
-    
-    for(int i=0; i < length; ++i) {
-        jobject rangeObject = env->NewObject(
-            javaTSRangeClass,
-            constructor,
-            javaPoint(env, &ranges[i].start_point),
-            javaPoint(env, &ranges[i].end_point),
-            ranges[i].start_byte,
-            ranges[i].end_byte
-        );
-        
-        env->SetObjectArrayElement(rangeArray, i, rangeObject);
-    }
-    
-    return rangeArray;
+    return getRanges(env, ranges, length);
 }
 
 /**
